@@ -1,26 +1,26 @@
+const puppeteer = require("puppeteer");
 const fs = require("fs");
-const wkhtmltopdf = require("wkhtmltopdf");
 
 async function generateCertificate(name, course) {
-  const date = new Date().toLocaleDateString();
-
-  // Read and replace placeholders in HTML
   let html = fs.readFileSync("template.html", "utf8");
+
+  // Replace placeholders
   html = html
     .replace("{{NAME}}", name)
     .replace("{{COURSE}}", course)
-    .replace("{{DATE}}", date);
+    .replace("{{DATE}}", new Date().toLocaleDateString());
+
+  const browser = await puppeteer.launch({ headless: true,
+                                           args: ['--no-sandbox', '--disable-setuid-sandbox']
+   });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: "load" });
 
   const fileName = `certificate-${name.replace(/\s/g, "_")}.pdf`;
+  await page.pdf({ path: fileName, format: "A4", printBackground: true });
 
-  // Generate PDF
-  wkhtmltopdf(html, { output: fileName }, (err) => {
-    if (err) {
-      console.error("Failed to generate certificate:", err);
-    } else {
-      console.log("Certificate saved as " + fileName);
-    }
-  });
+  await browser.close();
+  console.log(`✅ Certificate saved as ${fileName}`);
 }
 
 // Run example
